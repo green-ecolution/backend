@@ -37,7 +37,7 @@ jobs:
           echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Create Release
-        uses: thomaseizinger/create-release@1.0.0
+        uses: thomaseizinger/create-release@2.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GREEN_ECOLUTION_PAT }} 
         with:
@@ -48,7 +48,7 @@ jobs:
           prerelease: false
 
       - name: Merge main into develop branch
-        uses: thomaseizinger/create-pull-request@1.0.0
+        uses: thomaseizinger/create-pull-request@1.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -80,12 +80,16 @@ jobs:
         env:
           REPO: "${{ github.repository }}"
 
+      - name: Set commit sha
+        run: |
+          echo "COMMIT_SHA=$(git rev-parse --short $GITHUB_SHA)" >> $GITHUB_ENV
+
       - name: get build time
         run: |
           echo "BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >>${GITHUB_ENV}
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           build-args: |
@@ -97,13 +101,15 @@ jobs:
           file: ./.docker/Dockerfile.prod
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ env.REPO_LC }}:${{ env.RELEASE_VERSION }}, ghcr.io/${{ env.REPO_LC }}:latest
+          tags: |
+            ghcr.io/${{ env.REPO_LC }}:${{ env.RELEASE_VERSION }}
+            ghcr.io/${{ env.REPO_LC }}:latest
 
       - name: Notify management repo to update submodules
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.GREEN_ECOLUTION_PAT }}
-          repository: green-ecolution/green-ecolution-management
+          repository: green-ecolution/green-ecolution
           event-type: "update-submodules-production"
           client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ env.COMMIT_SHA }}", "version": "${{ env.RELEASE_VERSION }}", "from": "backend"}'
 

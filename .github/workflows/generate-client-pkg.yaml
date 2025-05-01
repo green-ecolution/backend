@@ -2,6 +2,8 @@ name: "Generate Green Ecolution Client Package"
 
 on:
   push:
+    paths:
+      - 'pkg/**'
     branches:
       - develop
 
@@ -11,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup Dependencies
         run: sudo apt update && sudo apt install -y make build-essential
