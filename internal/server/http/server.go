@@ -5,11 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
+	"github.com/akatranlp/sentinel/openid"
+	"github.com/go-chi/chi/v5"
 	"github.com/green-ecolution/backend/internal/worker"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/green-ecolution/backend/internal/config"
 	"github.com/green-ecolution/backend/internal/service"
 )
@@ -24,12 +28,14 @@ type HTTPError struct {
 type Server struct {
 	cfg      *config.Config
 	services *service.Services
+	ip       *openid.IdentitiyProvider
 }
 
-func NewServer(cfg *config.Config, services *service.Services) *Server {
+func NewServer(cfg *config.Config, services *service.Services, ip *openid.IdentitiyProvider) *Server {
 	return &Server{
 		cfg:      cfg,
 		services: services,
+		ip:       ip,
 	}
 }
 
@@ -42,6 +48,14 @@ func (s *Server) Run(ctx context.Context) error {
 	})
 
 	app.Mount("/", s.middleware())
+
+	router := chi.NewRouter()
+	router.Mount("/auth", s.ip.Handler())
+	router.Mount("/", adaptor.FiberApp(app))
+	server := http.Server{
+		Addr:    fmt.Sprintf(":%d", s.cfg.Server.Port),
+		Handler: router,
+	}
 
 	go func() {
 		slog.Info("starting plugin cleanup service: cleaning up unhealthy plugins")
@@ -65,13 +79,13 @@ func (s *Server) Run(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		slog.Info("shutting down http server")
-		if err := app.Shutdown(); err != nil {
+		if err := server.Shutdown(context.Background()); err != nil {
 			slog.Error("error while shutting down http server", "error", err, "service", "fiber")
 		}
 	}()
 
 	slog.Info("starting server", "url", s.cfg.Server.AppURL, "port", s.cfg.Server.Port, "service", "fiber")
-	return app.Listen(fmt.Sprintf(":%d", s.cfg.Server.Port))
+	return server.ListenAndServe()
 }
 
 func errorHandler(c *fiber.Ctx, err error) error {

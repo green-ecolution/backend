@@ -5,6 +5,7 @@
 //go:generate go tool goverter gen github.com/green-ecolution/backend/internal/server/mqtt/entities/...
 //go:generate go tool goverter gen github.com/green-ecolution/backend/internal/storage/mongodb/entities/...
 //go:generate go tool goverter gen github.com/green-ecolution/backend/internal/storage/postgres/mapper/...
+//go:generate go tool goverter gen github.com/green-ecolution/backend/internal/auth/mapper/...
 package main
 
 import (
@@ -19,6 +20,7 @@ import (
 	"syscall"
 
 	"github.com/green-ecolution/backend/docs"
+	sentinel "github.com/green-ecolution/backend/internal/auth"
 	"github.com/green-ecolution/backend/internal/config"
 	"github.com/green-ecolution/backend/internal/entities"
 	"github.com/green-ecolution/backend/internal/logger"
@@ -117,8 +119,13 @@ func startAppServices(ctx context.Context, cfg *config.Config) {
 
 	em := initializeEventManager()
 
+	ip, err := sentinel.CreateSentinel(ctx, repositories)
+	if err != nil {
+		panic(err)
+	}
+
 	services := domain.NewService(cfg, repositories, em)
-	httpServer := http.NewServer(cfg, services)
+	httpServer := http.NewServer(cfg, services, ip)
 	mqttServer := mqtt.NewMqtt(cfg, services)
 
 	runServices(ctx, httpServer, mqttServer, em, services)
@@ -174,6 +181,10 @@ func initializeRepositories(ctx context.Context, cfg *config.Config) (repos *sto
 		WateringPlan: postgresRepo.WateringPlan,
 		Routing:      routingRepo.Routing,
 		GpxBucket:    s3Repos.GpxBucket,
+
+		AuthUserRepository: postgresRepo.AuthUserRepository,
+		TokenRepository:    postgresRepo.TokenRepository,
+		SessionStore:       postgresRepo.SessionStore,
 	}
 
 	return repositories, closeFn

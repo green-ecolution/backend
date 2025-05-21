@@ -21,4 +21,25 @@ sql:
               pointer: true
               type: "Geom"
             nullable: true
-
+  - engine: postgresql
+    queries: "internal/auth/storage/queries"
+    schema: "internal/storage/postgres/migrations"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/auth/storage/_sqlc"
+        sql_package: "pgx/v5"
+        emit_interface: true
+        emit_pointers_for_null_types: true
+        emit_result_struct_pointers: true
+        emit_params_struct_pointers: true
+        emit_empty_slices: true
+        overrides:
+        - db_type: "uuid"
+          go_type:
+            import: "github.com/google/uuid"
+            type: "UUID"
+        - db_type: "timestamptz"
+          go_type:
+            import: "time"
+            type: "Time"
