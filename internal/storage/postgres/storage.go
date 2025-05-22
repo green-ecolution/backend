@@ -3,6 +3,9 @@ package postgres
 import (
 	"log/slog"
 
+	authmapper "github.com/green-ecolution/backend/internal/auth/mapper/generated"
+	authstorage "github.com/green-ecolution/backend/internal/auth/storage"
+	authsqlc "github.com/green-ecolution/backend/internal/auth/storage/_sqlc"
 	"github.com/green-ecolution/backend/internal/storage"
 	sqlc "github.com/green-ecolution/backend/internal/storage/postgres/_sqlc"
 	mapper "github.com/green-ecolution/backend/internal/storage/postgres/mapper/generated"
@@ -60,12 +63,34 @@ func NewRepository(conn *pgxpool.Pool) *storage.Repository {
 	wateringPlanRepo := wateringplan.NewWateringPlanRepository(store.NewStore(conn, sqlc.New(conn)), wateringPlanMappers)
 	slog.Info("successfully initialized wateringplan repository", "service", "postgres")
 
+	authUserMappers := authstorage.NewAuthUserMappers(
+		&authmapper.InternalAuthUserRepoMapperImpl{},
+		&authmapper.InternalAuthAccountRepoMapperImpl{},
+	)
+	authUserRepo := authstorage.NewAuthUserRepository(authsqlc.New(conn), authUserMappers)
+	slog.Info("successfully initialized authUser repository", "service", "auth")
+
+	tokenSessionMappers := authstorage.NewTokenSessionMappers(
+		&authmapper.InternalTokenSessionRepoMapperImpl{},
+	)
+	tokenSessionRepo := authstorage.NewTokenSessionRepository(authsqlc.New(conn), tokenSessionMappers)
+	slog.Info("successfully initialized tokenSession repository", "service", "auth")
+
+	sessionStore, err := authstorage.NewSessionStore(conn)
+	if err != nil {
+		panic(err)
+	}
+	slog.Info("successfully initialized session Store", "service", "auth")
+
 	return &storage.Repository{
-		Tree:         treeRepo,
-		TreeCluster:  treeClusterRepo,
-		Vehicle:      vehicleRepo,
-		Sensor:       sensorRepo,
-		Region:       regionRepo,
-		WateringPlan: wateringPlanRepo,
+		Tree:               treeRepo,
+		TreeCluster:        treeClusterRepo,
+		Vehicle:            vehicleRepo,
+		Sensor:             sensorRepo,
+		Region:             regionRepo,
+		WateringPlan:       wateringPlanRepo,
+		AuthUserRepository: authUserRepo,
+		TokenRepository:    tokenSessionRepo,
+		SessionStore:       sessionStore,
 	}
 }

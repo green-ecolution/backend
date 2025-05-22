@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 
+	accountbasestore "github.com/akatranlp/sentinel/account/base_store"
+	tokenbasestore "github.com/akatranlp/sentinel/token/base_store"
+	"github.com/alexedwards/scs/v2"
 	"github.com/google/uuid"
 	"github.com/green-ecolution/backend/internal/entities"
 )
@@ -235,15 +238,18 @@ type AuthRepository interface {
 }
 
 type Repository struct {
-	Auth         AuthRepository
-	Info         InfoRepository
-	Sensor       SensorRepository
-	Tree         TreeRepository
-	User         UserRepository
-	Vehicle      VehicleRepository
-	TreeCluster  TreeClusterRepository
-	Region       RegionRepository
-	WateringPlan WateringPlanRepository
-	Routing      RoutingRepository
-	GpxBucket    S3Repository
+	Auth               AuthRepository
+	Info               InfoRepository
+	Sensor             SensorRepository
+	Tree               TreeRepository
+	User               UserRepository
+	Vehicle            VehicleRepository
+	TreeCluster        TreeClusterRepository
+	Region             RegionRepository
+	WateringPlan       WateringPlanRepository
+	Routing            RoutingRepository
+	GpxBucket          S3Repository
+	AuthUserRepository accountbasestore.Repository
+	TokenRepository    tokenbasestore.Repository
+	SessionStore       scs.Store
 }
