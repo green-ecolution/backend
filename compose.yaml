@@ -1,6 +1,6 @@
 services:
   storage:
-    image: bitnami/minio:2025.4.22
+    image: bitnami/minio:2025.7.23
     environment:
       - MINIO_BROWSER=on
       - MINIO_ROOT_USER=${S3_ACCESS_KEY}
